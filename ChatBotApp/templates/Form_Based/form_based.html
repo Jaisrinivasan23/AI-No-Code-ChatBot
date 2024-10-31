@@ -1,0 +1,57 @@
+<!-- form_based.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Form-Based Chatbot</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Create Form-Based Chatbot</h1>
+
+        <form id="form-based-chatbot-form" method="POST" action="{% url 'form_based' %}">
+            {% csrf_token %}
+            <!-- Chatbot Name Input -->
+            <div class="form-group mb-4">
+                <label for="chatbot-name">Chatbot Name</label>
+                <input type="text" name="chatbot_name" id="chatbot-name" class="form-control" placeholder="Enter chatbot name" required>
+            </div>
+            <div id="questions-container">
+                <div class="form-row mb-3" id="question-row-1">
+                    <div class="col">
+                        <input type="text" name="question_1" class="form-control" placeholder="Enter Question" required>
+                    </div>
+                    <div class="col">
+                        <input type="text" name="answer_1" class="form-control" placeholder="Enter Answer" required>
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="add-question-btn" class="btn btn-secondary mb-4">Add Question</button>
+            <br>
+            <button type="submit" class="btn btn-primary">Create Chatbot</button>
+        </form>
+    </div>
+
+    <script>
+        let questionCount = 1;
+
+        // Function to add new question-answer fields
+        $("#add-question-btn").on("click", function() {
+            questionCount++;
+            const questionRow = `
+                <div class="form-row mb-3" id="question-row-${questionCount}">
+                    <div class="col">
+                        <input type="text" name="question_${questionCount}" class="form-control" placeholder="Enter Question" required>
+                    </div>
+                    <div class="col">
+                        <input type="text" name="answer_${questionCount}" class="form-control" placeholder="Enter Answer" required>
+                    </div>
+                </div>`;
+            $("#questions-container").append(questionRow);
+        });
+    </script>
+</body>
+</html>

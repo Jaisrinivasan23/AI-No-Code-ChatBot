@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ chatbot.name }} - Multi-AI Chatbot Interaction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-5">
+
+    <h1 class="text-center mb-4">{{ chatbot.name }} - Multi-AI Chatbot Interaction</h1>
+
+    <form method="POST" class="mb-4">
+        {% csrf_token %}
+        <div class="input-group">
+            <input type="text" name="question" class="form-control" placeholder="Ask a question..." required>
+            <button type="submit" class="btn btn-primary">Ask</button>
+        </div>
+    </form>
+
+    <div class="row">
+        <!-- Meta Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Meta LLaMA 3.1</h5>
+                    <p class="card-text">{{ meta_response }}</p>
+                    <a href="{% url 'select_ai_bot' chatbot.id 'Meta' %}" class="btn btn-outline-primary w-100">Select Meta</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- OpenAI Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">OpenAI GPT</h5>
+                    <p class="card-text">{{ openai_response }}</p>
+                    <a href="{% url 'select_ai_bot' chatbot.id 'OpenAI' %}" class="btn btn-outline-primary w-100">Select OpenAI</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gemini Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Gemini</h5>
+                    <p class="card-text">{{ gemini_response }}</p>
+                    <a href="{% url 'select_ai_bot' chatbot.id 'Gemini' %}" class="btn btn-outline-primary w-100">Select Gemini</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Claude Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Claude</h5>
+                    <p class="card-text">{{ claude_response }}</p>
+                    <a href="{% url 'select_ai_bot' chatbot.id 'Claude' %}" class="btn btn-outline-primary w-100">Select Claude</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

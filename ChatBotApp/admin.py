@@ -1,5 +1,10 @@
 from django.contrib import admin
-from .models import User,User_ChatData
-# Register your models here.
+from .models import *
 
-admin.site.register(User_ChatData)
+admin.site.register(ChatbotInteraction)
+admin.site.register(Conversation)
+admin.site.register(SelectedBot)
+
+
+admin.site.register(Chatbot)
+admin.site.register(Question)

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2>Chat with "{{ chatbot.name }}"</h2>
+    <div id="chat-box" style="border:1px solid #ddd; padding:20px; height:400px; overflow-y:scroll;">
+        <div id="messages">
+            <!-- Display the first question initially -->
+            <div class="bot-message">
+                <strong>Bot:</strong> {{ first_question.question_text }}
+            </div>
+            <input type="hidden" id="current-question-id" value="{{ first_question.id }}">
+        </div>
+    </div>
+    <div id="input-area" style="margin-top: 20px;">
+        <div id="options-container">
+            <!-- Options will be dynamically added here if available -->
+            {% if first_question.options %}
+                {% for option in first_question.options.options %}
+                    <button class="btn btn-secondary m-1" onclick="sendMessage('{{ option }}')">{{ option }}</button>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <input type="text" id="user-message" placeholder="Type your message..." class="form-control">
+        <button onclick="sendMessage()" class="btn btn-primary mt-2">Send</button>
+    </div>
+</div>
+<div class="mt-4">
+    <a href="{% url 'dashboard' user.id %}" class="btn btn-info mr-2">
+        <i class="fas fa-home"></i> Go to Dashboard
+    </a>
+    <a href="{% url 'Question_create' %}" class="btn btn-warning">
+        <i class="fas fa-edit"></i> Edit Chatbot
+    </a>
+</div>
+
+<script>
+    function sendMessage(optionText = null) {
+        const userMessage = optionText || document.getElementById('user-message').value;
+        if (!userMessage) return;
+
+        // Display user message in chat
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML += `<div class="user-message"><strong>You:</strong> ${userMessage}</div>`;
+        document.getElementById('user-message').value = '';  // Clear input field
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;  // Auto-scroll to the bottom
+
+        // Get current question ID
+        const questionId = document.getElementById('current-question-id').value;
+
+        // Send user message and question ID to server
+        fetch("{% url 'test_chatbot' chatbot.id %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `user_message=${userMessage}&question_id=${questionId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Display bot response
+            messagesDiv.innerHTML += `<div class="bot-message"><strong>Bot:</strong> ${data.bot_response}</div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;  // Auto-scroll to the bottom
+
+            // Update current question ID
+            document.getElementById('current-question-id').value = data.next_question_id;
+
+            // Update options dynamically
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';  // Clear existing options
+
+            // If options are available, display them as buttons; otherwise, keep input for text response
+            if (data.options) {
+                data.options.forEach(option => {
+                    optionsContainer.innerHTML += `<button onclick="sendMessage('${option}')" class="btn btn-secondary m-1">${option}</button>`;
+                });
+            } else if (data.next_question_id) {
+                // Show input field for text responses if there are no options
+                optionsContainer.innerHTML = '';
+            } else {
+                // Clear input area if the conversation has ended
+                document.getElementById('input-area').innerHTML = '<p>Conversation ended. Thank you!</p>';
+            }
+        });
+    }
+</script>
+
+<style>
+    .user-message {
+        text-align: right;
+        color: blue;
+        margin: 10px 0;
+    }
+    .bot-message {
+        text-align: left;
+        color: green;
+        margin: 10px 0;
+    }
+</style>
+{% endblock %}

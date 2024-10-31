@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ chatbot.name }} - Details</h2>
+    <p><strong>Type:</strong> {{ chatbot.get_chatbot_type_display }}</p>
+    <p><strong>Created on:</strong> {{ chatbot.created_at|date:"F j, Y, g:i a" }}</p>
+    <p><strong>Prompt:</strong> {{ chatbot.prompt }}</p>
+
+    <h4 class="mt-4">Recent Interactions</h4>
+    <ul class="list-group">
+        {% for interaction in chatbot.chatbotinteraction_set.all|slice:":5" %}
+            <li class="list-group-item">
+                <strong>User:</strong> {{ interaction.user_question }}<br>
+                <strong>Bot Response:</strong> {{ interaction.openai_response|default:"No response recorded" }}
+                <small class="d-block text-muted">At {{ interaction.timestamp|date:"F j, Y, g:i a" }}</small>
+            </li>
+        {% empty %}
+            <li class="list-group-item">No interactions yet.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
