@@ -243,7 +243,7 @@ def selected_bot_chat(request, chatbot_id, bot_name):
             bot_response=bot_response
         )
 
-        return render(request, 'File_Based/selected_bot_chat.html', {
+        return render(request, 'selected_bot_chat.html', {
             'chatbot': chatbot,
             'selected_bot': selected_bot,
             'user_input': user_input,
