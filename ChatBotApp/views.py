@@ -9,6 +9,8 @@ from .models import *
 import os
 from django.conf import settings
 import openai
+import replicate
+import requests
 
 openai.api_key = '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'
 
@@ -113,7 +115,8 @@ def text_file_based_bot(request):
         # Redirect to chatbot interaction page
         return redirect('multi_question_chatbot', chatbot_id=chatbot.id)
 
-    return render(request, 'text_file_based.html')
+    return render(request, 'text_file_based.html') #
+
 
 def create_dataset_based_prompt(question, dataset_content):
     """
@@ -122,21 +125,32 @@ def create_dataset_based_prompt(question, dataset_content):
     """
     prompt = (
         f"Here is a business dataset. You must strictly use the information from this dataset to answer the following questions. "
-        f"If the answer cannot be found in this dataset, respond with 'I cannot find the answer in the provided dataset.'\n\n"
+        f"If the answer cannot be found in this dataset, respond with 'I cannot find the answer.'\n\n"
         f"Dataset:\n{dataset_content[:1500]}...\n\n"  # First 1500 characters from dataset
         f"Question: {question}"
     )
     return prompt
 
 # AI Response Functions (Meta, OpenAI, Gemini, Claude)
+import requests
 
 def get_meta_response(question, dataset_content):
     try:
+        API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B"
+        headers = {"Authorization": "Bearer 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"}  # Replace with your free API key
+
         prompt = create_dataset_based_prompt(question, dataset_content)
-        # Placeholder for Meta LLaMA 3.1 response
-        return f"Meta LLaMA response for: {question} using the dataset."
+        payload = {"inputs": prompt}
+
+        response = requests.post(API_URL, headers=headers, json=payload)
+
+        if response.status_code == 200:
+            return response.json()[0]['generated_text']
+        else:
+            return f"Error: {response.json()}"
     except Exception as e:
         return f"Error in Meta LLaMA response: {str(e)}"
+
 
 def get_openai_response(question, dataset_content):
     try:
@@ -157,13 +171,20 @@ def get_openai_response(question, dataset_content):
     except Exception as e:
         return f"Error in OpenAI response: {str(e)}"
 
+import google.generativeai as genai
+
+# Configure Gemini API key
+genai.configure(api_key="AIzaSyC28fVBwe3qhRnluIT4x2mLhElSqexQUC8")
+
 def get_gemini_response(question, dataset_content):
     try:
         prompt = create_dataset_based_prompt(question, dataset_content)
-        # Placeholder for Gemini API response
-        return f"Gemini response for: {question} using the dataset."
+        model = genai.GenerativeModel("gemini-2.0-flash")  # Gemini Pro Model
+        response = model.generate_content(prompt)
+        return response.text  # Extracts text response
     except Exception as e:
         return f"Error in Gemini response: {str(e)}"
+
 
 def get_claude_response(question, dataset_content):
     try:
@@ -243,13 +264,10 @@ def selected_bot_chat(request, chatbot_id, bot_name):
             bot_response=bot_response
         )
 
-        return render(request, 'selected_bot_chat.html', {
-            'chatbot': chatbot,
-            'selected_bot': selected_bot,
-            'user_input': user_input,
-            'bot_response': bot_response
-        })
+        # Return the bot response in JSON format for AJAX requests
+        return JsonResponse({'bot_response': bot_response})
 
+    # For the initial GET request to load the chat page
     return render(request, 'selected_bot_chat.html', {
         'chatbot': chatbot,
         'selected_bot': selected_bot
@@ -416,3 +434,43 @@ def test_Form_chatbot(request, chatbot_id):
 
     return render(request, 'Form_Based/test_form.html', {'chatbot': chatbot})
 
+@login_required
+@csrf_exempt  # Allow POST requests without CSRF token verification for this example
+def host_chatbot(request, chatbot_name):
+    chatbot = Chatbot.objects.filter(name=chatbot_name).first()  # Get the first match if multiple found
+    if not chatbot:
+        return JsonResponse({'error': 'Chatbot not found.'}, status=404)
+
+    if request.method == 'POST':
+        user_message = request.POST.get('user_message')
+        if not user_message:
+            return JsonResponse({'error': 'Message cannot be empty.'}, status=400)
+
+        # Generate the response using OpenAI or another API
+        response_text = get_openai_response(user_message, chatbot.prompt)
+
+        # Save the conversation in the database
+        ChatbotInteraction.objects.create(
+            chatbot=chatbot,
+            user=request.user,
+            user_question=user_message,
+            openai_response=response_text
+        )
+
+        return JsonResponse({'bot_response': response_text})  # Return the response to the front end
+
+    return render(request, 'host_chatbot.html', {'chatbot': chatbot})
+
+
+@login_required
+def chatbot_admin(request, chatbot_name):
+    chatbot = get_object_or_404(Chatbot, name=chatbot_name)
+
+    # Retrieve chatbot insights: interactions and usage statistics
+    recent_interactions = ChatbotInteraction.objects.filter(chatbot=chatbot).order_by('-timestamp')[:10]  # Last 10 conversations
+
+    # Pass data to template for display
+    return render(request, 'chatbot_admin.html', {
+        'chatbot': chatbot,
+        'recent_interactions': recent_interactions,
+    })

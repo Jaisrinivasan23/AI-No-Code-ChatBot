@@ -22,6 +22,8 @@ urlpatterns = [
     path('test/<int:chatbot_id>/', test_chatbot, name='test_chatbot'),
     path('form_based_create/', form_based_bot, name='form_based'),
     path('form_based_test/<int:chatbot_id>/', test_Form_chatbot, name='form_based_test'),
+    path('<str:chatbot_name>/', host_chatbot, name='host_chatbot'),
+    path('<str:chatbot_name>/admin/', chatbot_admin, name='chatbot_admin')
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

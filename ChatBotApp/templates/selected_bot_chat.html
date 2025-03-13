@@ -13,26 +13,61 @@
             padding: 15px;
             margin-bottom: 20px;
         }
+        .user-message { text-align: right; color: blue; margin: 5px 0; }
+        .bot-message { text-align: left; color: green; margin: 5px 0; }
     </style>
 </head>
 <body class="container mt-5">
 
     <h1 class="text-center mb-4">{{ chatbot.name }} - {{ selected_bot }} Chat</h1>
 
-    <div class="chat-box bg-light">
-        <div class="conversation">
-            <strong>You:</strong> {{ user_input }} <br>
-            <strong>{{ selected_bot }}:</strong> {{ bot_response }}
-        </div>
+    <div id="chat-box" class="chat-box bg-light">
+        <!-- Chat messages will be appended here -->
     </div>
 
-    <form method="POST">
-        {% csrf_token %}
-        <div class="input-group">
-            <input type="text" name="user_input" class="form-control" placeholder="Ask a question..." required>
-            <button type="submit" class="btn btn-primary">Send</button>
-        </div>
-    </form>
+    <div class="input-group mb-3">
+        <input type="text" id="user-message" class="form-control" placeholder="Ask a question..." autocomplete="off" required>
+        <button onclick="sendMessage()" class="btn btn-primary">Send</button>
+    </div>
 
+    <a href="/{{ chatbot.name }}/" class="btn btn-secondary" target="_blank">Host Chatbot</a>
+
+    <script>
+        // Function to handle sending a message and receiving a response
+        function sendMessage() {
+            const userMessage = document.getElementById('user-message').value;
+            if (!userMessage) return;
+
+            const chatBox = document.getElementById('chat-box');
+
+            // Display user's message
+            chatBox.innerHTML += `<p class="user-message"><strong>You:</strong> ${userMessage}</p>`;
+            document.getElementById('user-message').value = '';  // Clear input
+
+            // Scroll to the bottom of the chat
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Send message to server
+            fetch("", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `user_input=${encodeURIComponent(userMessage)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display bot's response
+                if (data.bot_response) {
+                    chatBox.innerHTML += `<p class="bot-message"><strong>{{ selected_bot }}:</strong> ${data.bot_response}</p>`;
+                    chatBox.scrollTop = chatBox.scrollHeight;  // Scroll to bottom
+                } else if (data.error) {
+                    alert(data.error);  // Show error if any
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
 </body>
 </html>
