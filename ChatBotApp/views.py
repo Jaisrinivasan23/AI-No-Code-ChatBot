@@ -9,8 +9,7 @@ from .models import *
 import os
 from django.conf import settings
 import openai
-import replicate
-import requests
+from groq import Groq
 
 openai.api_key = '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'
 
@@ -133,23 +132,26 @@ def create_dataset_based_prompt(question, dataset_content):
 
 # AI Response Functions (Meta, OpenAI, Gemini, Claude)
 import requests
+client = Groq(api_key="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")
 
 def get_meta_response(question, dataset_content):
     try:
-        API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B"
-        headers = {"Authorization": "Bearer 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"}  # Replace with your free API key
-
         prompt = create_dataset_based_prompt(question, dataset_content)
-        payload = {"inputs": prompt}
 
-        response = requests.post(API_URL, headers=headers, json=payload)
+        chat_completion = client.chat.completions.create(
+            model="llama3-8b-8192",  # You can change to "llama3-70b-8192" if needed
+            messages=[
+                {"role": "system", "content": "You are an expert assistant trained on the dataset."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.2
+        )
 
-        if response.status_code == 200:
-            return response.json()[0]['generated_text']
-        else:
-            return f"Error: {response.json()}"
+        return chat_completion.choices[0].message.content
+
     except Exception as e:
-        return f"Error in Meta LLaMA response: {str(e)}"
+        return f"Error in Groq LLaMA response: {str(e)}"
 
 
 def get_openai_response(question, dataset_content):

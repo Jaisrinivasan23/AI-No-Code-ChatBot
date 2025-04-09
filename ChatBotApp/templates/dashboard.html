@@ -5,54 +5,316 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --accent-color: #3f37c9;
+            --danger-color: #ef476f;
+            --light-bg: #f8f9fa;
+            --dark-text: #212529;
+        }
+        
+        body {
+            background-color: #f9fafb;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 0.8rem 1.5rem;
+        }
+        
+        .avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .avatar:hover {
+            transform: scale(1.05);
+        }
+        
+        .logout-btn {
+            border-radius: 20px;
+            padding: 0.4rem 1.2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background-color: var(--danger-color);
+            border: none;
+        }
+        
+        .logout-btn:hover {
+            background-color: #d64161;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .page-header {
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 1rem;
+        }
+        
+        .action-btn {
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+        
+        .create-btn {
+            background-color: var(--primary-color);
+            border: none;
+        }
+        
+        .create-btn:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        }
+        
+        .analytics-btn {
+            background-color: var(--danger-color);
+            border: none;
+        }
+        
+        .analytics-btn:hover {
+            background-color: #d64161;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 71, 111, 0.3);
+        }
+        
+        .filter-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--dark-text);
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 50%;
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+        
+        .chatbot-card {
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .chatbot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            border-radius: 12px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            height: 100%;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--dark-text);
+        }
+        
+        .bot-type {
+            background-color: #e9ecef;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-bottom: 0.8rem;
+        }
+        
+        .bot-date {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-bottom: 1.2rem;
+        }
+        
+        .view-btn {
+            border-radius: 20px;
+            background-color: var(--primary-color);
+            border: none;
+            padding: 0.4rem 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .view-btn:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+        }
+        
+        .delete-btn {
+            background-color: transparent;
+            border: none;
+            color: var(--danger-color);
+            font-size: 1rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .delete-btn:hover {
+            background-color: rgba(239, 71, 111, 0.1);
+            transform: scale(1.1);
+        }
+        
+        @media (max-width: 992px) {
+            .actions-container {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            
+            .filter-container {
+                margin-top: 1rem;
+                width: 100%;
+            }
+            
+            .btn-group {
+                margin-bottom: 1rem;
+                width: 100%;
+                display: flex;
+            }
+            
+            .btn-group .action-btn {
+                flex: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .chatbot-card {
+                margin-bottom: 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-light bg-light justify-content-between">
-        <a class="navbar-brand">
-            <div class="rounded-circle bg-primary text-white d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;">
-                {{ user.username|first|upper }}
-            </div>
-        </a>
-        <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
+    <nav class="navbar navbar-light bg-white">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center">
+                <div class="avatar me-2">
+                    {{ user.username|first|upper }}
+                </div>
+                <span class="fw-bold ms-2 d-none d-sm-inline">{{ user.username }}</span>
+            </a>
+            <a href="{% url 'logout' %}" class="btn logout-btn">
+                <i class="fas fa-sign-out-alt me-1"></i> Logout
+            </a>
+        </div>
     </nav>
 
-    <div class="container mt-5">
-        <h1>Welcome, {{ user.username }}!</h1>
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{% url 'create_chatbot' %}"><button class="btn btn-primary">Create a ChatBot</button></a>
-            <a href="#"><button class="btn btn-danger">Analytics</button></a>
-            <!-- Filter Dropdown -->
-            <div class="form-group">
-                <label for="filter-type" class="form-label">Filter by Type:</label>
-                <select id="filter-type" class="form-select">
-                    <option value="all">All</option>
-                    <option value="text_file_based">Text File Based Bot</option>
-                    <option value="form_based">Form Based Bot</option>
-                    <option value="flow_based">Flow Based Bot</option>
-                </select>
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="page-header">Welcome to Your Dashboard!</h1>
+                
+                <div class="d-flex justify-content-between align-items-center actions-container">
+                    <div class="btn-group">
+                        <a href="{% url 'create_chatbot' %}">
+                            <button class="btn action-btn create-btn">
+                                <i class="fas fa-plus-circle me-2"></i>Create a ChatBot
+                            </button>
+                        </a>
+                        <a href="#">
+                            <button class="btn action-btn analytics-btn">
+                                <i class="fas fa-chart-line me-2"></i>Analytics
+                            </button>
+                        </a>
+                    </div>
+                    
+                    <div class="filter-container">
+                        <div class="form-group mb-0">
+                            <label for="filter-type" class="form-label fw-bold mb-2">
+                                <i class="fas fa-filter me-2"></i>Filter by Type:
+                            </label>
+                            <select id="filter-type" class="form-select">
+                                <option value="all">All Chatbots</option>
+                                <option value="text_file_based">Text File Based Bot</option>
+                                <option value="form_based">Form Based Bot</option>
+                                <option value="flow_based">Flow Based Bot</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <div class="container mt-5">
-            <h2 class="mb-4">Your Chatbots</h2>
-            <div class="row" id="chatbot-container">
-                {% for bot in chatbots %}
-                    <div class="col-md-4 mb-4 chatbot-card" data-type="{{ bot.chatbot_type }}">
+        <div class="row mt-5">
+            <div class="col-12">
+                <h2 class="section-title">Your Chatbots</h2>
+                
+                <div class="row" id="chatbot-container">
+                    {% for bot in chatbots %}
+                    <div class="col-lg-4 col-md-6 mb-4 chatbot-card" data-type="{{ bot.chatbot_type }}">
                         <div class="card">
-                            <!-- Delete button icon -->
-                            <button onclick="deleteBot('{{ bot.id }}')" class="btn btn-sm btn-danger position-absolute" style="top: 10px; right: 10px;">
-                                <i class="fa fa-trash-o"></i>
+                            <button onclick="deleteBot('{{ bot.id }}')" class="btn delete-btn position-absolute" style="top: 10px; right: 10px;">
+                                <i class="fas fa-trash"></i>
                             </button>
                             <div class="card-body">
                                 <h5 class="card-title">{{ bot.name }}</h5>
-                                <p class="card-text">Type: {{ bot.get_chatbot_type_display }}</p>
-                                <p class="card-text">Created at: {{ bot.created_at|date:"Y-m-d H:i" }}</p>
-                                <a href="{% url 'chatbot_detail' bot.id %}" class="btn btn-primary">View Details</a>
+                                <div class="bot-type">
+                                    <i class="fas fa-robot me-1"></i>
+                                    {{ bot.get_chatbot_type_display }}
+                                </div>
+                                <div class="bot-date">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Created on {{ bot.created_at|date:"M d, Y" }}
+                                </div>
+                                <a href="{% url 'chatbot_detail' bot.id %}" class="btn view-btn">
+                                    <i class="fas fa-eye me-1"></i>View Details
+                                </a>
                             </div>
                         </div>
                     </div>
-                {% endfor %}
+                    {% empty %}
+                    <div class="col-12 text-center py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-robot fa-4x mb-3 text-muted"></i>
+                            <h3>No chatbots yet</h3>
+                            <p class="text-muted">Create your first chatbot to get started!</p>
+                            <a href="{% url 'create_chatbot' %}" class="btn create-btn mt-3">
+                                <i class="fas fa-plus-circle me-2"></i>Create a ChatBot
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
@@ -86,10 +348,44 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert("Chatbot deleted successfully.");
-                        location.reload(); // Refresh the page to update the list
+                        const notification = document.createElement('div');
+                        notification.className = 'position-fixed top-0 end-0 p-3';
+                        notification.style.zIndex = '5000';
+                        notification.innerHTML = `
+                            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                                <div class="toast-header bg-success text-white">
+                                    <strong class="me-auto">Success</strong>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                                </div>
+                                <div class="toast-body">
+                                    Chatbot deleted successfully.
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(notification);
+                        setTimeout(() => {
+                            notification.remove();
+                            location.reload();
+                        }, 2000);
                     } else {
-                        alert("Failed to delete chatbot. Try again.");
+                        const notification = document.createElement('div');
+                        notification.className = 'position-fixed top-0 end-0 p-3';
+                        notification.style.zIndex = '5000';
+                        notification.innerHTML = `
+                            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                                <div class="toast-header bg-danger text-white">
+                                    <strong class="me-auto">Error</strong>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                                </div>
+                                <div class="toast-body">
+                                    Failed to delete chatbot. Try again.
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(notification);
+                        setTimeout(() => {
+                            notification.remove();
+                        }, 3000);
                     }
                 })
                 .catch(error => console.error("Error:", error));
