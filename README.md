@@ -1,4 +1,4 @@
-# 🤖 AI ChatBot Application
+# 🤖 NO Code AI ChatBot Application
 
 A sophisticated Django-based multi-AI chatbot platform that allows users to create, manage, and deploy intelligent conversational agents with multiple AI backend support.
 
@@ -511,3 +511,4 @@ For support, email your-email@example.com or open an issue in the repository.
 ---
 
 **Made with ❤️ using Django and AI**
+
