@@ -24,8 +24,7 @@
         <button onclick="sendMessage()" class="btn btn-primary mt-2">Send</button>
     </div>
 </div>
-<div class="mt-4">
-    <a href="{% url 'dashboard' user.id %}" class="btn btn-info mr-2">
+<div class="mt-4">    <a href="{% url 'dashboard' user_id=request.user.id %}" class="btn btn-info mr-2">
         <i class="fas fa-home"></i> Go to Dashboard
     </a>
     <a href="{% url 'Question_create' %}" class="btn btn-warning">

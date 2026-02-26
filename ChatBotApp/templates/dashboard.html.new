@@ -742,7 +742,7 @@
           {% if chatbots %}
             <div class="chatbot-grid" id="chatbot-container">
                 {% for bot in chatbots %}
-                <div class="chatbot-card spotlight-hover animate-fade-in-up" data-id="{{ bot.id }}" data-type="{{ bot.chatbot_type }}" data-aos="fade-up" data-aos-delay="{{ forloop.counter|add:2 }}00">
+                <div class="chatbot-card spotlight-hover animate-fade-in-up" style="animation-delay: {{ forloop.counter|add:2 }}00ms;" data-id="{{ bot.id }}" data-type="{{ bot.chatbot_type }}" data-aos="fade-up" data-aos-delay="{{ forloop.counter|add:2 }}00">
                     <div class="chatbot-header">
                         <div class="chatbot-icon">
                             {% if bot.chatbot_type == 'text_file_based' %}

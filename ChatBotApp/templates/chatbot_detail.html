@@ -1,25 +1,334 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container mt-4">
-    <h2>{{ chatbot.name }} - Details</h2>
-    <p><strong>Type:</strong> {{ chatbot.get_chatbot_type_display }}</p>
-    <p><strong>Created on:</strong> {{ chatbot.created_at|date:"F j, Y, g:i a" }}</p>
-    <p><strong>Prompt:</strong> {{ chatbot.prompt }}</p>
-    <a href="#"><button class="btn btn-warning">Analytics</button></a>
+{% block extra_head %}
+<style>
+    .chatbot-details-card {
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 2rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .chatbot-details-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .chatbot-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 1.5rem;
+    }
+    
+    .chatbot-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: var(--accent-color);
+    }
+    
+    .prompt-container {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-left: 4px solid var(--primary-color);
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .metadata-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+    
+    .metadata-item {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .metadata-item i {
+        font-size: 1.5rem;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .metadata-item .label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+    
+    .metadata-item .value {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .btn-custom {
+        border-radius: 8px;
+        font-weight: 500;
+        padding: 0.6rem 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-custom i {
+        font-size: 1rem;
+    }
+    
+    .btn-custom:hover {
+        transform: translateY(-2px);
+    }
+    
+    .interactions-card {
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: var(--card-shadow);
+    }
+    
+    .interactions-header {
+        padding: 1.25rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .interactions-list {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .interaction-item {
+        padding: 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+    
+    .interaction-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .user-question {
+        background-color: #e9f5ff;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    
+    .user-question::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: 15px;
+        border-width: 0 10px 10px 10px;
+        border-style: solid;
+        border-color: transparent transparent #e9f5ff transparent;
+    }
+    
+    .bot-response {
+        background-color: #f0f7f0;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-left: 2rem;
+        position: relative;
+    }
+    
+    .bot-response::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: 15px;
+        border-width: 0 10px 10px 10px;
+        border-style: solid;
+        border-color: transparent transparent #f0f7f0 transparent;
+    }
+    
+    .timestamp {
+        text-align: right;
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    
+    /* Empty state styling */
+    .empty-state {
+        padding: 3rem 1rem;
+        text-align: center;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state p {
+        color: #6c757d;
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
 
-    <h4 class="mt-4">Recent Interactions</h4>
-    <ul class="list-group">
-        {% for interaction in chatbot.chatbotinteraction_set.all|slice:":5" %}
-            <li class="list-group-item">
-                <strong>User:</strong> {{ interaction.user_question }}<br>
-                <strong>Bot Response:</strong> {{ interaction.openai_response|default:"No response recorded" }}
-                <small class="d-block text-muted">At {{ interaction.timestamp|date:"F j, Y, g:i a" }}</small>
-            </li>
-        {% empty %}
-            <li class="list-group-item">No interactions yet.</li>
-        {% endfor %}
-        
-    </ul>
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' user_id=request.user.id %}">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ chatbot.name }}</li>
+                </ol>
+            </nav>
+            <a href="{% url 'dashboard' user_id=request.user.id %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
 </div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card chatbot-details-card">
+            <div class="chatbot-header">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="chatbot-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h1 class="h3 mb-0">{{ chatbot.name }}</h1>
+                        <p class="mb-0 text-white-50">{{ chatbot.get_chatbot_type_display }} Chatbot</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div class="metadata-container">
+                    <div class="metadata-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <div class="label">Created On</div>
+                        <div class="value">{{ chatbot.created_at|date:"F j, Y" }}</div>
+                    </div>
+                    
+                    <div class="metadata-item">
+                        <i class="fas fa-clock"></i>
+                        <div class="label">Created At</div>
+                        <div class="value">{{ chatbot.created_at|date:"g:i a" }}</div>
+                    </div>
+                    
+                    <div class="metadata-item">
+                        <i class="fas fa-comment-dots"></i>
+                        <div class="label">Interactions</div>
+                        <div class="value">{{ chatbot.chatbotinteraction_set.count }}</div>
+                    </div>
+                    
+                    <div class="metadata-item">
+                        <i class="fas fa-cog"></i>
+                        <div class="label">Bot Type</div>
+                        <div class="value">{{ chatbot.get_chatbot_type_display }}</div>
+                    </div>
+                </div>
+                
+                {% if chatbot.prompt %}
+                <h5 class="mb-2">Training Prompt</h5>
+                <div class="prompt-container">
+                    <p class="mb-0">{{ chatbot.prompt|linebreaks }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="action-buttons">
+                    <a href="#" class="btn btn-primary btn-custom">
+                        <i class="fas fa-comment"></i> Chat with Bot
+                    </a>
+                    <a href="#" class="btn btn-info btn-custom">
+                        <i class="fas fa-chart-line"></i> View Analytics
+                    </a>
+                    <a href="#" class="btn btn-warning btn-custom">
+                        <i class="fas fa-edit"></i> Edit Bot
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card interactions-card">
+            <div class="interactions-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i> Recent Interactions</h5>
+                <a href="#" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            
+            <div class="interactions-list">
+                {% for interaction in chatbot.chatbotinteraction_set.all|slice:":5" %}
+                <div class="interaction-item">
+                    <div class="user-question">
+                        <strong><i class="fas fa-user me-2"></i> User:</strong> {{ interaction.user_question }}
+                    </div>
+                    
+                    <div class="bot-response">
+                        <strong><i class="fas fa-robot me-2"></i> Bot:</strong> {{ interaction.openai_response|default:"No response recorded" }}
+                    </div>
+                    
+                    <div class="timestamp">
+                        <i class="fas fa-clock me-1"></i> {{ interaction.timestamp|date:"F j, Y, g:i a" }}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-comments"></i>
+                    <p>No interactions with this bot yet.</p>
+                    <a href="#" class="btn btn-primary">Start a Conversation</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Truncate long prompts with a "Show More" button
+    document.addEventListener('DOMContentLoaded', function() {
+        const promptContainer = document.querySelector('.prompt-container');
+        if (promptContainer && promptContainer.scrollHeight > 200) {
+            const showMoreBtn = document.createElement('button');
+            showMoreBtn.className = 'btn btn-sm btn-link mt-2';
+            showMoreBtn.textContent = 'Show More';
+            
+            showMoreBtn.addEventListener('click', function() {
+                if (promptContainer.style.maxHeight) {
+                    promptContainer.style.maxHeight = null;
+                    this.textContent = 'Show Less';
+                } else {
+                    promptContainer.style.maxHeight = '200px';
+                    this.textContent = 'Show More';
+                }
+            });
+            
+            promptContainer.parentNode.appendChild(showMoreBtn);
+        }
+    });
+</script>
 {% endblock %}

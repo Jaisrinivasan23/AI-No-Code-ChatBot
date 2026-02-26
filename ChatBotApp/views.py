@@ -10,8 +10,14 @@ import os
 from django.conf import settings
 import openai
 from groq import Groq
+import time
+from django.utils import timezone
 
-openai.api_key = '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'
+# RAG imports are lazy-loaded to avoid TensorFlow import conflicts at startup
+# from .rag_service import RAGService, setup_rag_for_chatbot
+
+# Load API keys from environment variables via settings
+openai.api_key = settings.OPENAI_API_KEY
 
 def user_login(request):
     if request.method == 'POST':
@@ -87,34 +93,115 @@ def create_chatbot(request):
 
 @login_required
 def text_file_based_bot(request):
+    error_message = None
+    success_message = None
+    context = {}
+    
     if request.method == 'POST':
         chatbot_name = request.POST.get('chatbot_name')
         dataset_file = request.FILES.get('dataset')
-
-        # Save the chatbot details and the dataset file
-        chatbot = Chatbot.objects.create(
-            user=request.user,
-            name=chatbot_name,
-            chatbot_type='text_file_based',
-            dataset=dataset_file
-        )
-
-        # Read the dataset file and generate a prompt
-        dataset_path = os.path.join(settings.MEDIA_ROOT, chatbot.dataset.name)
-        with open(dataset_path, 'r', encoding='utf-8') as file:
-            business_data = file.read()
-
-        # Generate a prompt from the business data
-        prompt = f"Based on the provided business data, respond only to business-related queries. Ignore coding or irrelevant queries. Here's the business data:\n\n{business_data[:1500]}..."
-
-        # Save the prompt in the Chatbot instance
-        chatbot.prompt = prompt
-        chatbot.save()
-
-        # Redirect to chatbot interaction page
-        return redirect('multi_question_chatbot', chatbot_id=chatbot.id)
-
-    return render(request, 'text_file_based.html') #
+        use_rag = request.POST.get('use_rag') == 'on'  # Checkbox for RAG
+        
+        # Basic validation
+        if not chatbot_name:
+            error_message = "Please provide a name for your chatbot."
+            context = {'error': error_message}
+            return render(request, 'text_file_based.html', context)
+            
+        if not dataset_file:
+            error_message = "Please upload a dataset file."
+            context = {'error': error_message, 'chatbot_name': chatbot_name}
+            return render(request, 'text_file_based.html', context)
+        
+        # Validate file size (10MB limit)
+        if dataset_file.size > 10 * 1024 * 1024:  # 10MB in bytes
+            error_message = "File size exceeds 10MB limit. Please upload a smaller file."
+            context = {'error': error_message, 'chatbot_name': chatbot_name}
+            return render(request, 'text_file_based.html', context)
+            
+        # Validate file extension
+        valid_extensions = ['.txt', '.csv', '.pdf']
+        file_ext = os.path.splitext(dataset_file.name)[1].lower()
+        if file_ext not in valid_extensions:
+            error_message = f"Invalid file type. Please upload a TXT, CSV, or PDF file."
+            context = {'error': error_message, 'chatbot_name': chatbot_name}
+            return render(request, 'text_file_based.html', context)
+        
+        # Check if a chatbot with this name already exists
+        if Chatbot.objects.filter(name=chatbot_name).exists():
+            error_message = f"A chatbot with the name '{chatbot_name}' already exists. Please choose a different name."
+            context = {'error': error_message, 'chatbot_name': chatbot_name}
+            return render(request, 'text_file_based.html', context)
+            
+        try:
+            # Save the chatbot details and the dataset file
+            chatbot = Chatbot.objects.create(
+                user=request.user,
+                name=chatbot_name,
+                chatbot_type='text_file_based',
+                dataset=dataset_file,
+                use_rag=use_rag
+            )
+            
+            # Read the dataset file
+            dataset_path = os.path.join(settings.MEDIA_ROOT, chatbot.dataset.name)
+            
+            if use_rag:
+                # Use RAG for better context retrieval
+                try:
+                    # Lazy import to avoid TensorFlow loading at startup
+                    from .rag_service import setup_rag_for_chatbot
+                    
+                    start_time = time.time()
+                    
+                    # Setup RAG for this chatbot
+                    rag_service = setup_rag_for_chatbot(chatbot.id, dataset_path)
+                    
+                    processing_time = time.time() - start_time
+                    
+                    # Mark chatbot as RAG-enabled
+                    chatbot.rag_index_created = True
+                    chatbot.rag_last_indexed = timezone.now()
+                    chatbot.save()
+                    
+                    # Create RAG statistics
+                    RAGStatistics.objects.create(
+                        chatbot=chatbot,
+                        total_chunks=rag_service.vector_store.index.ntotal,
+                        processing_time=processing_time
+                    )
+                    
+                    messages.success(request, f"Chatbot created successfully with RAG! Processed {rag_service.vector_store.index.ntotal} chunks in {processing_time:.2f}s")
+                    
+                except Exception as e:
+                    # If RAG fails, fall back to standard prompt
+                    chatbot.use_rag = False
+                    chatbot.save()
+                    messages.warning(request, f"RAG setup failed: {str(e)}. Using standard mode.")
+                    
+                    with open(dataset_path, 'r', encoding='utf-8') as file:
+                        business_data = file.read()
+                    prompt = f"Based on the provided business data, respond only to business-related queries. Ignore coding or irrelevant queries. Here's the business data:\n\n{business_data[:1500]}..."
+                    chatbot.prompt = prompt
+                    chatbot.save()
+            else:
+                # Standard mode: generate a simple prompt
+                with open(dataset_path, 'r', encoding='utf-8') as file:
+                    business_data = file.read()
+                
+                prompt = f"Based on the provided business data, respond only to business-related queries. Ignore coding or irrelevant queries. Here's the business data:\n\n{business_data[:1500]}..."
+                chatbot.prompt = prompt
+                chatbot.save()
+            
+            # Redirect to chatbot interaction page
+            return redirect('multi_question_chatbot', chatbot_id=chatbot.id)
+            
+        except Exception as e:
+            error_message = f"An error occurred while creating your chatbot: {str(e)}"
+            context = {'error': error_message, 'chatbot_name': chatbot_name}
+            return render(request, 'text_file_based.html', context)
+    
+    return render(request, 'text_file_based.html', context)
 
 
 def create_dataset_based_prompt(question, dataset_content):
@@ -130,9 +217,32 @@ def create_dataset_based_prompt(question, dataset_content):
     )
     return prompt
 
-# AI Response Functions (Meta, OpenAI, Gemini, Claude)
+# AI Response Functions with RAG Support
 import requests
-client = Groq(api_key="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")
+# Initialize Groq client with API key from settings
+client = Groq(api_key=settings.GROQ_API_KEY)
+
+def get_meta_response_with_rag(chatbot, question):
+    """Get Meta AI response using RAG"""
+    try:
+        # Lazy import to avoid TensorFlow loading at startup
+        from .rag_service import RAGService
+        rag_service = RAGService(chatbot.id)
+        rag_result = rag_service.query(question, top_k=chatbot.rag_chunks_to_retrieve)
+        
+        chat_completion = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[
+                {"role": "system", "content": "You are an expert assistant. Answer based strictly on the provided context."},
+                {"role": "user", "content": rag_result['prompt']}
+            ],
+            max_tokens=500,
+            temperature=0.2
+        )
+        
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        return f"Error in RAG-enabled Groq LLaMA response: {str(e)}"
 
 def get_meta_response(question, dataset_content):
     try:
@@ -153,6 +263,28 @@ def get_meta_response(question, dataset_content):
     except Exception as e:
         return f"Error in Groq LLaMA response: {str(e)}"
 
+
+def get_openai_response_with_rag(chatbot, question):
+    """Get OpenAI response using RAG"""
+    try:
+        # Lazy import to avoid TensorFlow loading at startup
+        from .rag_service import RAGService
+        rag_service = RAGService(chatbot.id)
+        rag_result = rag_service.query(question, top_k=chatbot.rag_chunks_to_retrieve)
+        
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Answer based strictly on the provided context."},
+            {"role": "user", "content": rag_result['prompt']}
+        ]
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=messages,
+            max_tokens=300
+        )
+        return response.choices[0].message['content'].strip()
+    except Exception as e:
+        return f"Error in RAG-enabled OpenAI response: {str(e)}"
 
 def get_openai_response(question, dataset_content):
     try:
@@ -175,8 +307,22 @@ def get_openai_response(question, dataset_content):
 
 import google.generativeai as genai
 
-# Configure Gemini API key
-genai.configure(api_key="AIzaSyC28fVBwe3qhRnluIT4x2mLhElSqexQUC8")
+# Configure Gemini API key from settings
+genai.configure(api_key=settings.GEMINI_API_KEY)
+
+def get_gemini_response_with_rag(chatbot, question):
+    """Get Gemini response using RAG"""
+    try:
+        # Lazy import to avoid TensorFlow loading at startup
+        from .rag_service import RAGService
+        rag_service = RAGService(chatbot.id)
+        rag_result = rag_service.query(question, top_k=chatbot.rag_chunks_to_retrieve)
+        
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content(rag_result['prompt'])
+        return response.text
+    except Exception as e:
+        return f"Error in RAG-enabled Gemini response: {str(e)}"
 
 def get_gemini_response(question, dataset_content):
     try:
@@ -187,6 +333,18 @@ def get_gemini_response(question, dataset_content):
     except Exception as e:
         return f"Error in Gemini response: {str(e)}"
 
+
+def get_claude_response_with_rag(chatbot, question):
+    """Get Claude response using RAG"""
+    try:
+        # Lazy import to avoid TensorFlow loading at startup
+        from .rag_service import RAGService
+        rag_service = RAGService(chatbot.id)
+        rag_result = rag_service.query(question, top_k=chatbot.rag_chunks_to_retrieve)
+        # Placeholder for Claude API response with RAG
+        return f"Claude RAG response for: {question} using retrieved context."
+    except Exception as e:
+        return f"Error in RAG-enabled Claude response: {str(e)}"
 
 def get_claude_response(question, dataset_content):
     try:
@@ -200,19 +358,27 @@ def get_claude_response(question, dataset_content):
 def multi_question_chatbot(request, chatbot_id):
     chatbot = Chatbot.objects.get(id=chatbot_id)
 
-    # Read the dataset file for this chatbot
-    dataset_path = os.path.join(settings.MEDIA_ROOT, chatbot.dataset.name)
-    with open(dataset_path, 'r', encoding='utf-8') as file:
-        dataset_content = file.read()
-
     if request.method == 'POST':
         user_question = request.POST.get('question')
-
-        # Generate responses for each AI
-        meta_response = get_meta_response(user_question, dataset_content)
-        openai_response = get_openai_response(user_question, dataset_content)
-        gemini_response = get_gemini_response(user_question, dataset_content)
-        claude_response = get_claude_response(user_question, dataset_content)
+        
+        # Check if RAG is enabled for this chatbot
+        if chatbot.use_rag and chatbot.rag_index_created:
+            # Use RAG-enabled responses
+            meta_response = get_meta_response_with_rag(chatbot, user_question)
+            openai_response = get_openai_response_with_rag(chatbot, user_question)
+            gemini_response = get_gemini_response_with_rag(chatbot, user_question)
+            claude_response = get_claude_response_with_rag(chatbot, user_question)
+        else:
+            # Use traditional method with dataset content
+            dataset_path = os.path.join(settings.MEDIA_ROOT, chatbot.dataset.name)
+            with open(dataset_path, 'r', encoding='utf-8') as file:
+                dataset_content = file.read()
+            
+            # Generate responses for each AI
+            meta_response = get_meta_response(user_question, dataset_content)
+            openai_response = get_openai_response(user_question, dataset_content)
+            gemini_response = get_gemini_response(user_question, dataset_content)
+            claude_response = get_claude_response(user_question, dataset_content)
 
         # Store the interaction in the database
         ChatbotInteraction.objects.create(
@@ -232,11 +398,13 @@ def multi_question_chatbot(request, chatbot_id):
             'meta_response': meta_response,
             'openai_response': openai_response,
             'gemini_response': gemini_response,
-            'claude_response': claude_response
+            'claude_response': claude_response,
+            'use_rag': chatbot.use_rag
         })
 
     return render(request, 'multi_question_chatbot.html', {
-        'chatbot': chatbot
+        'chatbot': chatbot,
+        'use_rag': chatbot.use_rag
     })
 
 @login_required

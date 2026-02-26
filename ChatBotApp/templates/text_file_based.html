@@ -1,30 +1,707 @@
-<!-- yourapp/templates/yourapp/text_file_based.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text File Based Bot</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="container mt-5">
-    <h1>Create Text File Based Bot</h1>
+{% extends "base.html" %}
 
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="chatbot_name">Chatbot Name</label>
-            <input type="text" name="chatbot_name" class="form-control" required>
-        </div>
+{% block extra_head %}
+    <title>Text File Based Bot - AI Chatbot Platform</title>
+    <style>
+        /* The modern file upload area with animation */
+        .file-upload-area {
+            position: relative;
+            background-color: rgba(79, 70, 229, 0.03);
+            border: 2px dashed var(--light-border);
+            border-radius: var(--card-border-radius);
+            padding: 2.5rem;
+            text-align: center;
+            transition: var(--transition-normal);
+            cursor: pointer;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(79, 70, 229, 0.06);
+            transform: translateY(-5px);
+        }
+        
+        .file-upload-area.dragging {
+            background-color: rgba(79, 70, 229, 0.1);
+            border-color: var(--primary-color);
+            transform: scale(0.99);
+        }
+        
+        .file-upload-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            transition: var(--transition-normal);
+        }
+        
+        .file-upload-area:hover .file-upload-icon {
+            transform: translateY(-10px);
+        }
+        
+        .file-upload-text {
+            margin-bottom: 0;
+            color: var(--medium-text);
+            font-weight: 500;
+        }
+        
+        .file-upload-hint {
+            font-size: 0.875rem;
+            color: var(--light-text);
+            margin-top: 0.5rem;
+        }
+        
+        .file-upload-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        /* Selected file preview */
+        .file-preview {
+            display: none;
+            background-color: var(--light-input-bg);
+            border-radius: var(--input-border-radius);
+            padding: 1rem;
+            margin-top: 1rem;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .file-preview-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .file-preview-icon {
+            background-color: var(--primary-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+        }
+        
+        .file-preview-name {
+            font-weight: 600;
+            color: var(--dark-text);
+            margin-bottom: 0;
+            font-size: 1rem;
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70%;
+        }
+        
+        .file-preview-info {
+            font-size: 0.8125rem;
+            color: var(--medium-text);
+            margin-top: 0.25rem;
+        }
+        
+        .file-preview-remove {
+            color: var(--danger-color);
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            margin-left: auto;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition-fast);
+        }
+        
+        .file-preview-remove:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+        
+        /* Step indicator */
+        .step-indicator {
+            display: flex;
+            margin-bottom: 2.5rem;
+        }
+        
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        
+        .step:not(:last-child):after {
+            content: '';
+            height: 2px;
+            background-color: var(--light-border);
+            position: absolute;
+            top: 1rem;
+            left: 60%;
+            right: -50%;
+            z-index: 1;
+        }
+        
+        .step.active:not(:last-child):after {
+            background-color: var(--primary-color);
+        }
+        
+        .step-number {
+            width: 2rem;
+            height: 2rem;
+            background-color: var(--light-input-bg);
+            color: var(--medium-text);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            border: 2px solid var(--light-border);
+            position: relative;
+            z-index: 2;
+            transition: var(--transition-normal);
+        }
+        
+        .step.active .step-number {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+        }
+        
+        .step-title {
+            font-size: 0.875rem;
+            color: var(--medium-text);
+            font-weight: 500;
+            margin-bottom: 0;
+            transition: var(--transition-normal);
+        }
+        
+        .step.active .step-title {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        /* Additional page styles */
+        .create-bot-container {
+            padding: 1.5rem;
+        }
+        
+        .create-bot-panel {
+            background-color: var(--card-bg);
+            border-radius: var(--card-border-radius);
+            box-shadow: var(--card-box-shadow);
+            overflow: hidden;
+        }
+        
+        .create-bot-header {
+            padding: 1.5rem 1.5rem 0;
+        }
+        
+        .create-bot-title {
+            color: var(--dark-text);
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        
+        .create-bot-subtitle {
+            color: var(--medium-text);
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+        
+        .create-bot-body {
+            padding: 1.5rem;
+        }
+        
+        .btn-create {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: var(--button-border-radius);
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            transition: var(--transition-normal);
+            min-width: 10rem;
+        }
+        
+        .btn-create:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+        
+        .btn-create i {
+            margin-right: 0.5rem;
+        }
+        
+        .feature-panel {
+            background-color: rgba(79, 70, 229, 0.03);
+            border-radius: var(--card-border-radius);
+            padding: 1.5rem;
+            height: 100%;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .feature-item {
+            display: flex;
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .feature-icon {
+            background-color: rgba(79, 70, 229, 0.1);
+            color: var(--primary-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .feature-content h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--dark-text);
+        }
+        
+        .feature-content p {
+            font-size: 0.875rem;
+            color: var(--medium-text);
+            margin-bottom: 0;
+        }
+        
+        @media (max-width: 991px) {
+            .feature-col {
+                margin-top: 2rem;
+            }
+        }
+        
+        .form-error {
+            color: var(--danger-color);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        
+        .is-invalid ~ .form-error {
+            display: block;
+        }
+        
+        /* Server-side error animation */
+        @keyframes highlightError {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        
+        .highlight-error {
+            animation: highlightError 0.5s ease-in-out;
+            border-color: var(--danger-color) !important;
+        }
+    </style>
+{% endblock %}
 
-        <div class="form-group mt-3">
-            <label for="dataset">Upload Business Dataset (Text File)</label>
-            <input type="file" name="dataset" class="form-control" accept=".txt" required>
+{% block content %}
+    <div class="create-bot-container">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="create-bot-panel">
+                        <div class="create-bot-header">
+                            <h1 class="create-bot-title">
+                                <i class="fas fa-file-alt me-2 text-primary"></i>Create Text-Based Chatbot
+                            </h1>
+                            <p class="create-bot-subtitle">Upload a text file to create a knowledgeable chatbot that leverages your content.</p>
+                            
+                            <!-- Step indicator -->
+                            <div class="step-indicator">
+                                <div class="step active">
+                                    <div class="step-number">1</div>
+                                    <p class="step-title">Upload File</p>
+                                </div>
+                                <div class="step">
+                                    <div class="step-number">2</div>
+                                    <p class="step-title">Create Bot</p>
+                                </div>
+                                <div class="step">
+                                    <div class="step-number">3</div>
+                                    <p class="step-title">Chat</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="create-bot-body">
+                            <form method="POST" enctype="multipart/form-data" id="textFileBotForm">
+                                {% csrf_token %}
+                                
+                                {% if error %}
+                                <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert" id="serverError">
+                                    <i class="fas fa-exclamation-triangle me-2"></i> {{ error }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mb-4">
+                                    <label for="chatbot_name" class="form-label">
+                                        <i class="fas fa-tag me-2 text-primary"></i>Chatbot Name
+                                    </label>
+                                    <input type="text" class="form-control {% if error and 'name' in error %}highlight-error{% endif %}" 
+                                        id="chatbot_name" name="chatbot_name" 
+                                        placeholder="Enter a descriptive name for your chatbot" 
+                                        value="{{ chatbot_name|default_if_none:'' }}" required>
+                                    <div class="form-text">Choose a name that reflects the purpose of your chatbot</div>
+                                    <div class="form-error">Please enter a chatbot name</div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label">
+                                        <i class="fas fa-database me-2 text-primary"></i>Knowledge Base
+                                    </label>
+                                    <div class="file-upload-area {% if error and 'file' in error %}highlight-error{% endif %}" id="fileUploadArea">
+                                        <div class="file-upload-icon">
+                                            <i class="fas fa-cloud-upload-alt"></i>
+                                        </div>
+                                        <p class="file-upload-text">Drag and drop your knowledge base file here</p>
+                                        <p class="file-upload-hint">or click to browse (Supports TXT, CSV, PDF files up to 10MB)</p>
+                                        <input type="file" class="file-upload-input" name="dataset" id="datasetFile" accept=".txt,.csv,.pdf" required>
+                                    </div>
+                                    
+                                    <div class="file-preview" id="filePreview" style="display: none;">
+                                        <div class="file-preview-header">
+                                            <div class="file-preview-icon">
+                                                <i class="fas fa-file-alt"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="file-preview-name" id="fileName">document.txt</h5>
+                                                <p class="file-preview-info" id="fileInfo">Text document, 1.2 MB</p>
+                                            </div>
+                                            <button type="button" class="file-preview-remove" id="removeFile">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="form-error" id="fileError">Please upload a knowledge base file</div>
+                                </div>
+                                
+                                <!-- RAG Configuration Section -->
+                                <div class="mb-4">
+                                    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(147, 51, 234, 0.05) 100%);">
+                                        <div class="card-body">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="use_rag" name="use_rag" checked>
+                                                <label class="form-check-label" for="use_rag">
+                                                    <strong><i class="fas fa-brain me-2 text-primary"></i>Enable RAG (Recommended)</strong>
+                                                </label>
+                                            </div>
+                                            <div class="mt-2 ms-4">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    <strong>Retrieval Augmented Generation</strong> - Advanced AI feature that:
+                                                </small>
+                                                <ul class="small text-muted mt-2 mb-0" style="line-height: 1.8;">
+                                                    <li>📊 Splits documents into smart chunks for better understanding</li>
+                                                    <li>🧠 Creates semantic embeddings using AI</li>
+                                                    <li>🔍 Retrieves only the most relevant context</li>
+                                                    <li>✨ Provides more accurate and context-aware responses</li>
+                                                    <li>⚡ Handles large documents efficiently</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 d-flex justify-content-end">
+                                    <a href="{% url 'dashboard' user_id=request.user.id %}" class="btn btn-outline-secondary me-3">Cancel</a>
+                                    <button type="submit" class="btn-create" id="createButton">
+                                        <i class="fas fa-robot"></i>Create Chatbot
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 feature-col">
+                    <div class="feature-panel">
+                        <h3 class="mb-4"><i class="fas fa-lightbulb text-primary me-2"></i>Why Text-Based Chatbots?</h3>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Quick Setup</h4>
+                                <p>Simply upload a text file and get a chatbot that understands your content within seconds.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Knowledge-Based</h4>
+                                <p>Your chatbot answers questions based on your specific content, not general internet knowledge.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Customer Support</h4>
+                                <p>Ideal for FAQs, product info, and freeing up your time from repetitive questions.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Documentation Helper</h4>
+                                <p>Turn manuals and guides into interactive assistants that help users find answers.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <div class="form-group mt-4">
-            <button type="submit" class="btn btn-primary">Create Bot</button>
-        </div>
-    </form>
-</body>
-</html>
+    </div>
+    
+    <script>
+        // Get DOM elements
+        const form = document.getElementById('textFileBotForm');
+        const fileInput = document.getElementById('datasetFile');
+        const filePreview = document.getElementById('filePreview');
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const fileName = document.getElementById('fileName');
+        const fileInfo = document.getElementById('fileInfo');
+        const removeFile = document.getElementById('removeFile');
+        const nameInput = document.getElementById('chatbot_name');
+        const submitBtn = document.getElementById('createButton');
+        const serverError = document.getElementById('serverError');
+        
+        // Check if error message exists and highlight fields if needed
+        document.addEventListener('DOMContentLoaded', function() {
+            if (serverError) {
+                const errorText = serverError.innerText.toLowerCase();
+                
+                // Highlight name field if name error
+                if (errorText.includes('name')) {
+                    nameInput.classList.add('highlight-error');
+                    setTimeout(() => {
+                        nameInput.classList.remove('highlight-error');
+                    }, 2000);
+                }
+                
+                // Highlight file field if file error
+                if (errorText.includes('file') || errorText.includes('dataset') || errorText.includes('upload')) {
+                    fileUploadArea.classList.add('highlight-error');
+                    setTimeout(() => {
+                        fileUploadArea.classList.remove('highlight-error');
+                    }, 2000);
+                }
+            }
+        });
+        
+        // Drag and drop events
+        fileUploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragging');
+        });
+        
+        fileUploadArea.addEventListener('dragleave', function() {
+            fileUploadArea.classList.remove('dragging');
+        });
+        
+        fileUploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragging');
+            
+            if (e.dataTransfer.files.length) {
+                const file = e.dataTransfer.files[0];
+                fileInput.files = e.dataTransfer.files;
+                
+                // Validate file type
+                const validTypes = ['.txt', '.csv', '.pdf', 'text/plain', 'text/csv', 'application/pdf'];
+                const fileType = file.type;
+                const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (!validTypes.some(type => fileType.includes(type) || fileExtension.includes(type))) {
+                    showError('Please upload a valid file type (TXT, CSV, or PDF).');
+                    fileInput.value = '';
+                    return;
+                }
+                
+                // Validate file size (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showError('File size exceeds 10MB limit. Please upload a smaller file.');
+                    fileInput.value = '';
+                    return;
+                }
+                
+                updateFilePreview(file);
+            }
+        });
+        
+        // File input change event
+        fileInput.addEventListener('change', function() {
+            if (this.files.length) {
+                const file = this.files[0];
+                
+                // Validate file type
+                const validTypes = ['.txt', '.csv', '.pdf', 'text/plain', 'text/csv', 'application/pdf'];
+                const fileType = file.type;
+                const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (!validTypes.some(type => fileType.includes(type) || fileExtension.includes(type))) {
+                    showError('Please upload a valid file type (TXT, CSV, or PDF).');
+                    fileInput.value = '';
+                    return;
+                }
+                
+                // Validate file size (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showError('File size exceeds 10MB limit. Please upload a smaller file.');
+                    fileInput.value = '';
+                    return;
+                }
+                
+                updateFilePreview(file);
+            }
+        });
+        
+        function showError(message) {
+            // Create error alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+            alertDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            // Remove any existing error alerts
+            document.querySelectorAll('.alert-danger').forEach(el => {
+                if (!el.id || el.id !== 'serverError') {
+                    el.remove();
+                }
+            });
+            
+            fileUploadArea.after(alertDiv);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 300);
+            }, 5000);
+        }
+        
+        // Update file preview
+        function updateFilePreview(file) {
+            // Format file size
+            let fileSize;
+            if (file.size < 1024 * 1024) {
+                fileSize = (file.size / 1024).toFixed(1) + ' KB';
+            } else {
+                fileSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+            
+            // Detect file type
+            let fileTypeDisplay = 'Document';
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            
+            if (fileExt === 'txt') {
+                fileTypeDisplay = 'Text document';
+            } else if (fileExt === 'csv') {
+                fileTypeDisplay = 'CSV document';
+            } else if (fileExt === 'pdf') {
+                fileTypeDisplay = 'PDF document';
+            }
+            
+            fileName.textContent = file.name;
+            fileInfo.textContent = `${fileTypeDisplay}, ${fileSize}`;
+            filePreview.style.display = 'block';
+            fileUploadArea.style.display = 'none';
+            
+            // Clear any file-related errors
+            document.getElementById('fileError').style.display = 'none';
+        }
+        
+        // Remove selected file
+        removeFile.addEventListener('click', function() {
+            fileInput.value = '';
+            filePreview.style.display = 'none';
+            fileUploadArea.style.display = 'block';
+        });
+        
+        // Form validation and submit animation
+        form.addEventListener('submit', function(e) {
+            // Validate form
+            let isValid = true;
+            
+            // Validate name
+            if (!nameInput.value.trim()) {
+                nameInput.classList.add('is-invalid');
+                document.querySelector('.form-error').style.display = 'block';
+                isValid = false;
+            } else {
+                nameInput.classList.remove('is-invalid');
+                document.querySelector('.form-error').style.display = 'none';
+            }
+            
+            // Validate file
+            if (!fileInput.files.length) {
+                fileUploadArea.classList.add('highlight-error');
+                document.getElementById('fileError').style.display = 'block';
+                isValid = false;
+            } else {
+                fileUploadArea.classList.remove('highlight-error');
+                document.getElementById('fileError').style.display = 'none';
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                showError('Please fill in all required fields correctly.');
+                return;
+            }
+            
+            // Add loading animation to submit button
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Creating Bot...';
+            submitBtn.disabled = true;
+        });
+    </script>
+{% endblock %}

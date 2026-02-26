@@ -1,68 +1,433 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ chatbot.name }} - Multi-AI Chatbot Interaction</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="container mt-5">
+{% extends "base.html" %}
 
-    <h1 class="text-center mb-4">{{ chatbot.name }} - Multi-AI Chatbot Interaction</h1>
+{% block extra_head %}
+    <title>{{ chatbot.name }} - AI Comparison</title>
+    <style>
+        :root {
+            --meta-color: #0668E1;
+            --openai-color: #10a37f;
+            --gemini-color: #8e44ad;
+            --claude-color: #FF5722;
+            --chat-radius: 18px;
+        }        
+        .comparison-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .page-header h1 {
+            font-weight: 700;
+            font-size: 1.8rem;
+            margin-bottom: 0;
+        }
+        
+        .page-header .subtitle {
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+        
+        .chat-card {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .chat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }        
+        .chat-card .card-header {
+            padding: 1.25rem 1.5rem;
+            background-color: white;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-card .card-body {
+            padding: 1.5rem;
+            height: 350px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .ai-model {
+            display: flex;
+            align-items: center;
+        }
+        
+        .ai-model .ai-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .meta-logo { background-color: var(--meta-color); }
+        .openai-logo { background-color: var(--openai-color); }
+        .gemini-logo { background-color: var(--gemini-color); }
+        .claude-logo { background-color: var(--claude-color); }
+        
+        .ai-model .ai-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0;
+        }
+        
+        .ai-model .ai-provider {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        
+        .model-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-select {
+            border-radius: 8px;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        
+        .ai-response {
+            padding: 15px;
+            border-radius: var(--chat-radius);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            position: relative;
+            color: var(--dark-text);
+            white-space: pre-wrap;
+        }
+        
+        .ai-response.meta-response { 
+            background-color: rgba(6, 104, 225, 0.05);
+            border: 1px solid rgba(6, 104, 225, 0.1);
+        }
+        
+        .ai-response.openai-response { 
+            background-color: rgba(16, 163, 127, 0.05);
+            border: 1px solid rgba(16, 163, 127, 0.1);
+        }
+        
+        .ai-response.gemini-response { 
+            background-color: rgba(142, 68, 173, 0.05);
+            border: 1px solid rgba(142, 68, 173, 0.1);
+        }
+        
+        .ai-response.claude-response { 
+            background-color: rgba(255, 87, 34, 0.05);
+            border: 1px solid rgba(255, 87, 34, 0.1);
+        }
+          .chat-input-container {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 3rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .form-control {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            color: var(--dark-text);
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .form-control:focus {
+            background-color: #ffffff;
+            border-color: var(--primary-color);
+            color: var(--dark-text);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+        }
+        
+        .input-group .btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            font-weight: 500;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            border-top-right-radius: 10px;        }
+        
+        .input-group .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(67, 97, 238, 0.3);
+        }
+        
+        .select-btn {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 10px;
+            padding: 0.6rem 1rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .select-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.2);
+        }
+        
+        .user-question {
+            background-color: #f8f9fa;
+            border-radius: var(--chat-radius);
+            padding: 15px;
+            margin-bottom: 1.5rem;
+            position: relative;
+            border-top-left-radius: 4px;
+            border: 1px solid #e9ecef;
+            align-self: flex-end;
+            max-width: 85%;
+        }
+        
+        .user-question::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border-top: 10px solid #f8f9fa;
+            border-left: 10px solid transparent;
+        }
+        
+        .user-label {
+            position: absolute;
+            top: -25px;
+            right: 0;
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 2rem;
+            color: #6c757d;
+            text-align: center;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #dee2e6;
+        }
+          @media (max-width: 768px) {
+            .chat-card {
+                margin-bottom: 1.5rem;
+            }
+            
+            .chat-card .card-body {
+                height: 250px;
+            }
+        }
+    </style>
+{% endblock %}
 
-    <form method="POST" class="mb-4">
-        {% csrf_token %}
-        <div class="input-group">
-            <input type="text" name="question" class="form-control" placeholder="Ask a question..." required>
-            <button type="submit" class="btn btn-primary">Ask</button>
-        </div>
-    </form>
-
-    <div class="row">
-        <!-- Meta Section -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Meta LLaMA 3.1</h5>
-                    <p class="card-text">{{ meta_response }}</p>
-                    <a href="{% url 'select_ai_bot' chatbot.id 'Meta' %}" class="btn btn-outline-primary w-100">Select Meta</a>
+{% block content %}
+    <div class="container comparison-container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="page-header">
+                    <div>
+                        <h1>{{ chatbot.name }}</h1>
+                        <p class="subtitle">Compare AI model responses side by side</p>
+                    </div>
+                    <a href="{% url 'dashboard' user_id=request.user.id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                    </a>
                 </div>
             </div>
         </div>
-
-        <!-- OpenAI Section -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">OpenAI GPT</h5>
-                    <p class="card-text">{{ openai_response }}</p>
-                    <a href="{% url 'select_ai_bot' chatbot.id 'OpenAI' %}" class="btn btn-outline-primary w-100">Select OpenAI</a>
+        
+        <div class="chat-input-container mb-5">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="input-group">
+                    <input type="text" name="question" class="form-control" placeholder="Ask a question about your business data..." required>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-paper-plane me-2"></i> Ask All Models
+                    </button>
+                </div>
+                <div class="form-text mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Ask a question related to your uploaded business data to see how different AI models respond
+                </div>
+            </form>
+        </div>
+        
+        <div class="row g-4">
+            <!-- Meta Section -->
+            <div class="col-lg-6">
+                <div class="chat-card card h-100">
+                    <div class="card-header">
+                        <div class="ai-model">
+                            <div class="ai-logo meta-logo">
+                                <i class="fab fa-facebook"></i>
+                            </div>
+                            <div>
+                                <h5 class="ai-name">LLaMA 3.1</h5>
+                                <p class="ai-provider">Meta</p>
+                            </div>
+                        </div>
+                        <div class="model-actions">
+                            <a href="{% url 'select_ai_bot' chatbot.id 'Meta' %}" class="btn btn-primary btn-select">
+                                <i class="fas fa-check me-1"></i> Select
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if request.method == 'POST' %}
+                            <div class="user-question">
+                                <span class="user-label">You asked</span>
+                                {{ request.POST.question }}
+                            </div>
+                            <div class="ai-response meta-response">
+                                {{ meta_response|linebreaks }}
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <div class="empty-state-icon">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <p>Ask a question to see LLaMA's response</p>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Gemini Section -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Gemini</h5>
-                    <p class="card-text">{{ gemini_response }}</p>
-                    <a href="{% url 'select_ai_bot' chatbot.id 'Gemini' %}" class="btn btn-outline-primary w-100">Select Gemini</a>
+            
+            <!-- OpenAI Section -->
+            <div class="col-lg-6">
+                <div class="chat-card card h-100">
+                    <div class="card-header">
+                        <div class="ai-model">
+                            <div class="ai-logo openai-logo">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <div>
+                                <h5 class="ai-name">GPT-4</h5>
+                                <p class="ai-provider">OpenAI</p>
+                            </div>
+                        </div>
+                        <div class="model-actions">
+                            <a href="{% url 'select_ai_bot' chatbot.id 'OpenAI' %}" class="btn btn-primary btn-select">
+                                <i class="fas fa-check me-1"></i> Select
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if request.method == 'POST' %}
+                            <div class="user-question">
+                                <span class="user-label">You asked</span>
+                                {{ request.POST.question }}
+                            </div>
+                            <div class="ai-response openai-response">
+                                {{ openai_response|linebreaks }}
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <div class="empty-state-icon">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <p>Ask a question to see GPT-4's response</p>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Claude Section -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Claude</h5>
-                    <p class="card-text">{{ claude_response }}</p>
-                    <a href="{% url 'select_ai_bot' chatbot.id 'Claude' %}" class="btn btn-outline-primary w-100">Select Claude</a>
+            
+            <!-- Gemini Section -->
+            <div class="col-lg-6">
+                <div class="chat-card card h-100">
+                    <div class="card-header">
+                        <div class="ai-model">
+                            <div class="ai-logo gemini-logo">
+                                <i class="fab fa-google"></i>
+                            </div>
+                            <div>
+                                <h5 class="ai-name">Gemini Pro</h5>
+                                <p class="ai-provider">Google</p>
+                            </div>
+                        </div>
+                        <div class="model-actions">
+                            <a href="{% url 'select_ai_bot' chatbot.id 'Gemini' %}" class="btn btn-primary btn-select">
+                                <i class="fas fa-check me-1"></i> Select
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if request.method == 'POST' %}
+                            <div class="user-question">
+                                <span class="user-label">You asked</span>
+                                {{ request.POST.question }}
+                            </div>                            <div class="ai-response gemini-response">
+                                {{ gemini_response|linebreaks }}
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <div class="empty-state-icon">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <p>Ask a question to see Gemini's response</p>
+                            </div>
+                        {% endif %}
+                        <a href="{% url 'select_ai_bot' chatbot.id 'Gemini' %}" class="btn select-btn w-100">Select Gemini</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Claude Section -->
+            <div class="col-md-6 mb-4">
+                <div class="chat-card card">
+                    <div class="card-body">
+                        <h5 class="card-title"><span class="ai-icon">🟣</span> Claude</h5>
+                        <p class="card-text">{{ claude_response }}</p>
+                        <a href="{% url 'select_ai_bot' chatbot.id 'Claude' %}" class="btn select-btn w-100">Select Claude</a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
+{% endblock content %}
 </body>
 </html>

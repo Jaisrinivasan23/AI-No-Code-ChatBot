@@ -1,0 +1,46 @@
+# Django Framework
+Django==5.1.2
+django-environ==0.11.2
+
+# Database
+psycopg2-binary==2.9.9
+
+# AI/ML Libraries
+openai==0.28.1
+groq==0.11.0
+google-generativeai==0.8.3
+anthropic==0.34.2
+
+# RAG Dependencies - Fixed versions to avoid conflicts
+sentence-transformers==3.0.1
+faiss-cpu==1.8.0
+PyPDF2==3.0.1
+pandas==2.1.4
+numpy==1.26.4
+protobuf==4.25.3
+transformers==4.40.0
+
+# NLP & Text Processing (lightweight, no TensorFlow)
+nltk==3.8.1
+
+# Caching (optional)
+redis==5.0.1
+django-redis==5.4.0
+
+# Utilities
+python-dotenv==1.0.1
+requests==2.32.3
+Pillow==10.2.0
+
+# Development Tools (optional)
+# pytest==8.0.0
+# pytest-django==4.8.0
+# black==24.2.0
+# flake8==7.0.0
+
+# Production Server
+gunicorn==21.2.0
+whitenoise==6.6.0
+
+# Monitoring & Logging (optional)
+# sentry-sdk==1.40.0
